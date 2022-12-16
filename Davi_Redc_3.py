@@ -1,144 +1,107 @@
-# David Redction,a simple version
+############# David Redction ##############
 
 import random
 import math
 from sympy import O, isprime
+from RNSopreration import *
 
-def get_prime(x):
-    while True:
-        tmp = random.getrandbits(x)
-        if tmp == 0: 
-            continue
-        if tmp == 2:
-            continue
-        if isprime(tmp): 
-            return tmp
+p = 2 ** 250 * 3 ** 159 - 1
+e = 503    
+N = 22
 
-def xgcd(a, b):
-    x0, y0, x1, y1 = 1, 0, 0, 1
-    while b != 0:
-        q, a, b = a // b, b, a % b
-        x0, x1 = x1, x0 - q * x1
-        y0, y1 = y1, y0 - q * y1
-    return a, x0, y0
+s = 48
+u = 2 * s
+alpha = 0.5
+l = 18
+t = 10
 
-def modinv(a, m):
-    g, x, y = xgcd(a, m)
-    if g != 1:
-        raise Exception('modular inverse does not exist')
-    else:
-        return x % m
+B = [281474976710653, 281474976710651, 281474976710649, 281474976710647, 281474976710641, 281474976710639, 281474976710635,
+        281474976710633, 281474976710629, 281474976710623, 281474976710621, 281474976710611, 281474976710597, 281474976710593,
+        281474976710591, 281474976710581, 281474976710579, 281474976710573, 281474976710569, 281474976710567, 281474976710563, 
+        281474976710561]
 
-def mul(m):
-    total = 1
-    for i in m:
-        total *= i
-    return total
+Q = mul(B)
 
-def CRT(a, m):
-    sum = 0
-    M = mul(m)
-    for i in range(len(a)):
-        Mi = M // m[i]
-        sum += (a[i] * modinv(Mi, m[i])) % m[i] * Mi 
-    return sum % M
-
-# def r_app(vi, Qtil_modp, k):
-#     r = 0
-#     for i in range(N):
-#         r += vi[i] * (Qtil_modp[i] >> (e - u))
-#     r = (r - ((k * Q) % p >> (e - u))) * math.floor((2 ** (e + t)) / p)
-#     r = r >> (t + u)
-#     return r
-
-def r_app(vi, Qtil_modp, k):
-    r = 0
+def QdivBi(Q ,B):
+    QdivBi = []
     for i in range(N):
-        r += vi[i] * (Qtil_modp[i] >> (e - u))
-    r = math.floor((r - (((k * Q) % p) >> (e - u))) / p)
-    return r
+        QdivBi.append(Q // B[i])
+    return QdivBi
 
-def David_reduction(z_R, Qtil, Qtil_inv, N, B, p):
-    vi = []
+def Q1_INV(Q2, B):
+    Q1_INV = []
     for i in range(N):
-        vi.append((z_R[i] * Qtil_inv[i]) % B[i])
+        Q1_INV.append(modinv(Q2[i], B[i]))
+    return Q1_INV
+
+def Q1mod_p_B(Q1, B):
+    Q3 = []
+    for i in range(N):
+        tmp = []
+        for j in range(N):
+            tmp.append((Q1[i] % p) % B[j])
+        Q3.append(tmp)
+    return Q3
+
+def Q1mod_p(Q1):
+    Q4 = []
+    for i in range(N):
+        Q4.append(Q1[i] % p)
+    return Q4
+
+# applox k
+def kapp(Va):
+    k = int(alpha*2**l)
+    for i in range(N):
+        k = k + (Va[i] >> (s - l))
+    k = k >> l
+    return k
+
+# r approx
+def rapp(Q2, u, k):
+    SS_2 = []
+    sie = 0
+    for i in range(N):
+        sie = Q4[i]
+        SS_2.append(sie>>(e - u))
+    print(SS_2)
+    SS_3 = multiRNS_no_red(Q2, SS_2, B, N)
     
-    k = int(alpha * (2 ** l))
+    sum1 = 0
     for i in range(N):
-        k += vi[i] >> (s - l)
-    k = math.trunc(k + alpha) >> l
+        sum1=sum1+SS_3[i]
+    SSq = (-((k * Q)% p)>>(e - u))
+    sum1 = SSq + sum1
+    quotient = (sum1<<(e-u)) //p
+    return quotient
 
-    r = 0
+def David_reduction():
+    v = []
     for i in range(N):
-        r += vi[i] * (Qtil_modp[i] >> (e - u))
-    r = math.floor((r - (((k * Q) % p) >> (e - u))) / p)
-    print('k :', k)
-    print('r :', r)
-            
+        v.append((ZR[i] * Q2[i]) % B[i])
+    k = kapp(v)
+    r = rapp(Q3, u, k)  
     vi_Qtil= []
     for i in range(N):
-        vi_Qtil.append(vi[i] * (Qtil[i] % p))
+        vi_Qtil.append(v[i] * (Q1[i] % p))
     amodp = (sum(vi_Qtil) % p - (k * Q) % p) - r * p
-
     ans = []
     for i in range(N):
         ans.append(amodp % B[i])
-
     return ans
 
 if __name__ == "__main__":
-    N = 22
-    B = []
-    s = 48
-    u = 2 * s
-    alpha = 0.5
-    l = 18
-    p2s = 2 ** s
-    di1 = [3, 7, 15, 21, 27, 35, 59, 65, 77, 87, 93]
-    di2 = [5, 9, 17, 23, 33, 45, 63, 75, 83, 89, 95]
-    for i in range(11):
-        B.append(p2s - di1[i])
-        B.append(p2s - di2[i])
-    Q = mul(B)
-    p = 2 ** 250 * 3 ** 159 - 1
-    e = 503
-    t = 10
-    a = random.getrandbits(501) %  p
-    # a = 6050354745843467015840703213625286096871267259139533504340516576642729824676683714225334731411660711691098417198039283352471893134181663911193218659800
-    b = random.getrandbits(501) %  p
-    # b = 8810366702918147011847988616646408443159467160250681155778967775410683832587870734358528874495026302377479077378772921075066693212932226611213827176852
-    a_R = []
-    b_R = []
-    for i in range(N):
-        a_R.append(a % B[i])
-        b_R.append(b % B[i])
+    X = random.randint(0, 9 * Q // 10)
+    XR = INTtoRNS(X, B, N)
 
-    z_R = []
-    for i in range(N):
-        z_R.append((a_R[i] * b_R[i]) % B[i])
+    Q1 = QdivBi(Q, B)
+    Q2 = Q1_INV(Q1, B)
+    Q3 = Q1mod_p_B(Q2, B)
+    Q4 = Q1mod_p(Q1)
 
-    Qtil = []
-    for i in range(N):
-        Qtil.append(Q // B[i])
-    
-    Qtil_inv = []
-    for i in range(N):
-        Qtil_inv.append(modinv(Qtil[i], B[i]))
-    
-    Qpq = []
-    for i in range(N):
-        Q_j = []
-        for j in range(N):
-            Q_j.append((Qtil[i] % p) % B[j])
-        Qpq.append(Q_j)
-
-    Qtil_modp = []
-    for i in range(N):
-        Qtil_modp.append(Qtil[i] % p)
-
-    c = (a * b) % p    #(CRT(z_R, B) % p)
+    c = X % p    #(CRT(z_R, B) % p)
     print('c = a * b mod p:', c)
-    D_R = David_reduction(z_R, Qtil, Qtil_inv, N, B, p)
+    D_R = David_reduction()
     # print('David Reduction:', D_R)
     # print('a * b:', z_R)
     D_CRT = CRT(D_R, B)

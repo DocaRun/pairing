@@ -43,23 +43,82 @@ def CRT(a, m):
         sum += (a[i] * modinv(Mi, m[i])) % m[i] * Mi 
     return sum % M
 
+def multiRNS_no_red(Xa,Ya,ma,m1):
+    """
+    Multiplication of 2 RNS integers without the reduction by ma[i] at the end
+
+    """
+    Xr = []
+    for i in range (m1):
+        x = Xa[i] * Ya[i]
+        Xr.append(x)
+    return Xr
+# Fonction that computes the parameter k
+# applox k
+# input : Va[i] = Xa[i] * invTaBE[i] (invTaBE[i] = (Ma / ma[i]) ^ (-1))
+#       : s0 = alpha = 0.1
+#       : Acc = l = 18
+def k_computation(Va, s0, Acc):
+    k = int(s0*2**(Acc))
+    for i in range(N):
+        k = k + (Va[i]>>(s-Acc))
+    k = k>>Acc
+    return k
+# r approx??
+# input  : tab = Tai mod p (Ta = Ma / mai)
+#        : e = prime bit
+#        : q = u(= 96)
+# output : T = tab[i] >> (s - l)
+def truncTab_v2(tab, e, q):
+    T = []
+    n = len(tab)
+    sie = 0
+    for j in range(n):
+        sie = tab[j]
+        T.append(sie>>(e-q))  # /2**(r-q)
+    return T
+
+# r approx
+# inputs : Va[i] = Xa[i] * invTaBE[i]
+#        : precision = u (= 96)
+#        : k
+# output : q (= r) = 
+def compute_quotient(Va, u, k):
+    #Computes the T mod p
+    Ta2 = []
+    for i in range(N):
+        Ta2.append(Qtil[i]%p)
+    
+    # Take the u most siginificant bit of T mod p
+    # SS_2[i] = tab[i] >> (e - u)
+    SS_2 = truncTab_v2(Ta2, e, u)
+
+    # Does a RNS multiplication of V and SS_2, without the reduction by the ma[i]
+    # SS_3[i] = Va[i] * SS_2[i]
+    #         = Va[i] * tab[i] >> (e - u)
+    SS_3 = multiRNS_no_red(Va, SS_2, B, N)
+    
+    # accumulation of all the term of SS_2
+    # sum1[i + 1] = sum1[i] + SS_3[i]
+    #         = sum1[i] + Va[i] * tab[i] >> (e - u)
+    sum1 = 0
+    for i in range(N):
+        sum1=sum1+SS_3[i]
+    SSq = (-((k * Q)% p)>>(e-u))
+    sum1 = SSq + sum1
+    # Here I use a simple // to do the division, but the "normal" way is to multiply it
+    # by 8950950946455969 = 1/p * 2**(555) before a right shift.
+    quotient = (sum1<<(e-u)) //p
+    return quotient
+
 def David_reduction(z_R, Qtil, Qtil_inv, N, B, p):
     vi = []
     for i in range(N):
         vi.append((z_R[i] * Qtil_inv[i]) % B[i])
     
-    k_list = []
-    for i in range(N):
-        k_list.append(((vi[i]) % B[i]) * Qtil[i])
-    k = math.floor(sum(k_list) / Q)
+    k = k_computation(vi, 0.1, 18)
 
-    Msum = 0
-    for i in range(N):
-        Msum += vi[i] * Qtil[i] % p
-    r = math.floor(((Msum - (k * Q) % p) % p) / p)
-    # r = 1
-    print('k :', k)
-    print('r :', r)
+    r = compute_quotient(vi, u, k)
 
     vi_Qtil= []
     for i in range(N):
